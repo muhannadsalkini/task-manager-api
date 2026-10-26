@@ -39,18 +39,16 @@ npm install
 | --- | --- |
 | `npm run dev` | Start the dev server with nodemon + ts-node (`src/server.ts`) |
 | `npm run build` | Compile TypeScript to `dist/` |
-| `node dist/src/server.js` | Run the compiled server |
+| `npm start` | Run the compiled server (`dist/src/server.js`) |
 | `npm test` | Run the Jest integration test suite |
 
 The server listens on `http://localhost:3000` by default. Set the `PORT` environment variable to change it.
-
-> **Known issue:** `npm start` and the Dockerfile `CMD` point to `dist/server.js`, but because `tsconfig.json` compiles both `src/` and `tests/` from the project root, the build output lands in `dist/src/server.js`. Until those paths are aligned, start the compiled server with `node dist/src/server.js` as shown above.
 
 ### Run with Docker
 
 ```bash
 docker build -t task-manager-api .
-docker run -p 3000:3000 task-manager-api node dist/src/server.js
+docker run -p 3000:3000 task-manager-api
 ```
 
 ## 📡 API
