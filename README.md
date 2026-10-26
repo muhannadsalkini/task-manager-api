@@ -1,110 +1,135 @@
-# Task Management API
+# Task Manager API
 
-## Project Overview
-A clean, production-style Task Management API built with Node.js, Express, and TypeScript. This API demonstrates a solid architectural foundation, including creating and listing tasks, input validation, centralized error handling, and Swagger documentation.
+A small, layered REST API for creating and listing tasks, built with Express 5 and TypeScript, with request validation, centralized error handling, OpenAPI docs, integration tests and a Docker image.
 
-## Tech Stack
-- **Runtime**: Node.js
-- **Framework**: Express.js
-- **Language**: TypeScript
-- **Documentation**: Swagger (OpenAPI 3)
-- **Testing**: Jest + Supertest
-- **Containerization**: Docker
+## ✨ Features
 
-## Architecture Explanation
-The project follows a layered architecture (Controller-Service-Repository pattern, simplified to Controller-Service for this use case since we use in-memory storage):
+- `POST /tasks` and `GET /tasks` endpoints backed by an in-memory store
+- Input validation with `express-validator` (title is trimmed and must be non-empty)
+- Centralized error handling via a custom `AppError` class and a global error middleware, so every error comes back as consistent JSON
+- JSON 404 response for unknown routes
+- Interactive Swagger UI (OpenAPI 3) at `/api-docs`
+- Security and logging middleware: `helmet`, `cors`, `morgan`
+- Integration tests with Jest + Supertest
+- Multi-stage Dockerfile for a slim production image
 
-- **Controllers**: Handle HTTP requests, responses, and calls to services. They are decoupled from business logic.
-- **Services**: Contain business logic. In this case, managing the in-memory task list.
-- **Models**: TypeScript interfaces defining the shape of our data (DTOs and Entities).
-- **Middleware**: Cross-cutting concerns like Error Handling and Validation.
-- **Utils**: Helper classes like `AppError`.
+## 🛠 Tech Stack
 
-This separation of concerns ensures the code is testable, maintainable, and scalable.
+| Area | Tools |
+| --- | --- |
+| Runtime / Language | Node.js, TypeScript |
+| Framework | Express 5 |
+| Validation | express-validator |
+| API docs | swagger-jsdoc, swagger-ui-express |
+| Testing | Jest, ts-jest, Supertest |
+| Tooling | nodemon, ts-node |
+| Container | Docker (`node:18-alpine`) |
 
-## How to Run Locally
+## 🚀 Getting Started
 
-1. **Install Dependencies**
-   ```bash
-   npm install
-   ```
+**Prerequisites:** Node.js 18+ and npm.
 
-2. **Development Mode**
-   ```bash
-   npm run dev
-   ```
-   Server will start on `http://localhost:3000`
-
-3. **Build & Run Production**
-   ```bash
-   npm run build
-   npm start
-   ```
-
-## How to Run Tests
-
-Run the integration tests using Jest:
 ```bash
-npm test
+git clone https://github.com/muhannadsalkini/task-manager-api.git
+cd task-manager-api
+npm install
 ```
 
-## How to Run with Docker
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Start the dev server with nodemon + ts-node (`src/server.ts`) |
+| `npm run build` | Compile TypeScript to `dist/` |
+| `node dist/src/server.js` | Run the compiled server |
+| `npm test` | Run the Jest integration test suite |
 
-1. **Build the Image**
-   ```bash
-   docker build -t task-manager-api .
-   ```
+The server listens on `http://localhost:3000` by default. Set the `PORT` environment variable to change it.
 
-2. **Run the Container**
-   ```bash
-   docker run -p 3000:3000 task-manager-api
-   ```
+> **Known issue:** `npm start` and the Dockerfile `CMD` point to `dist/server.js`, but because `tsconfig.json` compiles both `src/` and `tests/` from the project root, the build output lands in `dist/src/server.js`. Until those paths are aligned, start the compiled server with `node dist/src/server.js` as shown above.
 
-## Swagger Documentation
-Interactive API documentation is available at:
-[http://localhost:3000/api-docs](http://localhost:3000/api-docs)
+### Run with Docker
 
-## Example Requests
+```bash
+docker build -t task-manager-api .
+docker run -p 3000:3000 task-manager-api node dist/src/server.js
+```
 
-**Create a Task**
+## 📡 API
+
+Interactive docs: **http://localhost:3000/api-docs**
+
+| Method | Path | Description | Success |
+| --- | --- | --- | --- |
+| `POST` | `/tasks` | Create a task. Body: `{ "title": string }` | `201 Created` |
+| `GET` | `/tasks` | List all tasks | `200 OK` |
+
+**Create a task**
+
 ```bash
 curl -X POST http://localhost:3000/tasks \
   -H "Content-Type: application/json" \
-  -d '{"title": "Complete the coding challenge"}'
+  -d '{"title": "Write the README"}'
 ```
 
-**Create a Task (Validation Error)**
-```bash
-curl -X POST http://localhost:3000/tasks \
-  -H "Content-Type: application/json" 
+```json
+{
+  "id": "3f1c2b9e-7a1d-4c8e-9a43-2d8f6b0e5c11",
+  "title": "Write the README",
+  "completed": false,
+  "createdAt": "2026-02-11T10:00:00.000Z"
+}
 ```
 
-**Get All Tasks**
+**List tasks**
+
 ```bash
 curl http://localhost:3000/tasks
 ```
 
-**Not Found Example (404)**
-```bash
-curl http://localhost:3000/unknown-route
+**Errors** use a single shape for validation errors (`400`), unknown routes (`404`) and unexpected failures (`500`):
+
+```json
+{ "status": "error", "message": "Title is required and must be a non-empty string" }
 ```
 
-## Section: Approach, Design Decisions, & AI Usage
+## 🧪 Tests
 
-### Approach
-I prioritized **clarity and simplicity** over complexity.
-- Used **In-Memory Storage** as requested, avoiding DB complexity / ORM setup.
-- Implemented **Layers** (Controller, Service) to show readiness for scaling to a real DB.
-- **Validation** is done via `express-validator` to ensure robust and chainable validation logic.
+```bash
+npm test
+```
 
-### Design Decisions
-- **Dependency Injection**: The `TaskController` instantiates `TaskService`. In a complex app, we'd use a DI container (like `tsyringe` or NestJS), but for this scope, manual instantiation keeps it readable.
-- **Swagger**: Defined the spec manually in `src/docs/swagger.ts` to keep `controllers` clean of verbose decorators/comments, suitable for a strict small-scope project.
-- **Error Handling**: Custom `AppError` class and global middleware ensure consistent error responses.
+`tests/task.test.ts` drives the Express app in-process with Supertest (no running server needed). It covers:
 
-### Where AI Tools Were Used
-AI was used to:
-- Generate the boilerplate configuration for TypeScript and Docker.
-- Scaffolding basic CRUD logic to speed up typing.
-- Structuring the README to look professional.
-- Writing the initial test suite setup.
+- creating a task with a valid title (`201`, generated `id`, `completed: false`, `createdAt`)
+- rejecting a missing or whitespace-only title (`400`)
+- listing tasks and checking the returned task structure
+
+## 📁 Project Structure
+
+```
+src/
+├── app.ts                       # Express app: middleware, routes, 404 + error handlers
+├── server.ts                    # Entry point (reads PORT, starts the server)
+├── controllers/task.controller.ts
+├── services/task.service.ts     # Business logic + in-memory task store
+├── routes/task.routes.ts
+├── middleware/
+│   ├── validate.middleware.ts   # express-validator rules for task creation
+│   └── error.middleware.ts      # Global error handler
+├── models/task.model.ts         # Task and CreateTaskDto types
+├── utils/appError.ts            # Operational error class with HTTP status
+└── docs/swagger.ts              # OpenAPI 3 spec
+tests/
+└── task.test.ts                 # Jest + Supertest integration tests
+```
+
+## 🧭 Design Notes
+
+- **Controller → Service layering.** Controllers handle HTTP only; the service owns the data. Swapping the in-memory array for a database means changing the service, not the routes.
+- **In-memory storage** keeps the project dependency-free; data resets on restart.
+- **OpenAPI spec defined in one file** (`src/docs/swagger.ts`) instead of JSDoc comments, keeping controllers clean.
+- **Consistent errors.** Anything thrown as an `AppError` keeps its status code and message; anything else becomes a generic `500` and is logged.
+- AI tools were used for boilerplate config (TypeScript, Docker), initial scaffolding and the initial test setup.
+
+## 📄 License
+
+[MIT](LICENSE)
